@@ -1,0 +1,516 @@
+on bucket empty:
+    if custom model data of player's tool is 9999:
+        if event-block is not lava cauldron:
+            cancel event
+            send action bar "&c&lX &7This item cannot be placed." to player
+
+
+on dispense:
+    if custom model data of item is 9999 or custom model data of item is 9998:
+        cancel event
+
+command /infbucket:
+    permission: *
+    trigger:
+        set {_ib} to bucket named "&3Infinite Lava Bowl"
+        set lore of {_ib} to "&7Total Collected: &20"
+        set custom model data of {_ib} to 9998
+        give player {_ib}
+
+on bucket fill with priority highest:
+    if event-block is not lava cauldron:
+        stop
+
+    if player is sneaking:
+        cancel event
+        stop
+
+    set {_loc} to location of event-block
+
+    if custom model data of player's tool is 9998 or custom model data of player's off hand tool is 9998:
+        cancel event
+        wait 1 tick
+        set block at {_loc} to empty cauldron
+
+        set {_u} to uuid of player
+        add 1 to {inf_bucket_collect::%{_u}%}
+
+        if custom model data of player's tool is 9998:
+            set {_it} to player's tool
+            set line 1 of lore of {_it} to "&7Total Collected: &2%{inf_bucket_collect::%{_u}%}%"
+            set player's tool to {_it}
+        else:
+            set {_it} to player's off hand tool
+            set line 1 of lore of {_it} to "&7Total Collected: &2%{inf_bucket_collect::%{_u}%}%"
+            set player's off hand tool to {_it}
+
+        stop
+
+    set {_hand} to ""
+    if {_main} is bucket:
+        set {_hand} to "main"
+    else if {_off} is bucket:
+        set {_hand} to "off"
+    else:
+        stop
+
+    cancel event
+
+    wait 1 tick
+    set block at {_loc} to empty cauldron
+    if player's gamemode is not creative:
+        if {_hand} is "main":
+            set player's tool to air
+        else:
+            set player's offhand tool to air
+
+    set {_u} to uuid of player
+    add 1 to {lava_collected::%{_u}%}
+    add 1 to {lava_buffer::%{_u}%}
+    add 1 to {console_lava_buffer::%{_u}%}
+    
+    set {_found} to false
+    loop all items in player's inventory:
+        if custom model data of loop-item is 9999:
+
+            set {_first} to uncolored line 4 of lore of loop-item
+            replace all "⎢ " and "First Created: " with "" in {_first}
+
+            set {_lore} to uncolored line 2 of lore of loop-item
+            replace all "⎢ " and "Collected: " with "" in {_lore}
+            set {_itemCount} to {_lore} parsed as integer
+            if {_itemCount} is not set:
+                set {_itemCount} to 1
+            add 1 to {_itemCount}
+            
+            set name of loop-item to "&6&lFull Lava Bucket &e(%{_itemCount}%)"
+            set line 1 of lore of loop-item to "&r&f&l⎡ &r&c&lCannot be placed."
+            set line 2 of lore of loop-item to "&r&f&l⎢ &r&7Collected: &f%{_itemCount}%"
+            set line 3 of lore of loop-item to "&r&f&l⎢ &r&7Player: &e%player%"
+            set line 4 of lore of loop-item to "&r&f&l⎢ &r&7First Created: &a%{_first}%"
+            set line 5 of lore of loop-item to "&r&f&l⎣ &r&7Last Updated: &d%now%"
+            
+            set {_found} to true
+            stop loop
+
+    if {_found} is false:
+        set {_i} to lava bucket named "&6&lFull Lava Bucket &e(1)"
+        set line 1 of lore of {_i} to "&r&f&l⎡ &r&c&lCannot be placed."
+        set line 2 of lore of {_i} to "&r&f&l⎢ &7Collected: &f1"
+        set line 3 of lore of {_i} to "&r&f&l⎢ &7Player: &e%player%"
+        set line 4 of lore of {_i} to "&r&f&l⎢ &7First Created: &a%now%"
+        set line 5 of lore of {_i} to "&r&f&l⎣ &7Last Updated: &d%now%"
+        set custom model data of {_i} to 9999
+        give player 1 of {_i}
+    
+    play sound "BLOCK_AMETHYST_BLOCK_RESONATE" with volume 0.5 to player
+	
+every 1 minute:
+    loop all players:
+        set {_u} to uuid of loop-player
+        if {lava_buffer::%{_u}%} > 0:
+            send "" to loop-player
+            send "&c&lSUMMARY: &7In the last minute, you filled &f%{lava_buffer::%{_u}%}% &7buckets!" to loop-player
+            send "" to loop-player
+            delete {lava_buffer::%{_u}%}
+
+every 30 seconds:
+    if size of {console_lava_buffer::*} > 0:
+        send "--- [LAVA FARMING: LAST 30s] ---" to console
+        loop {console_lava_buffer::*}:
+            set {_p} to loop-index parsed as offline player
+            send "%{_p}%: %loop-value% buckets" to console
+        send "--------------------------------" to console
+        delete {console_lava_buffer::*}
+
+command /lavastart:
+    trigger:
+        if {lavastarted::%uuid of player%} is set:
+            send "&cYou have already claimed your lava starter kit." to player
+            stop
+        set {_empty} to 0
+        set {_i} to 0
+        loop 36 times:
+            if slot {_i} of player's inventory is air:
+                add 1 to {_empty}
+            add 1 to {_i}
+        if {_empty} < 7:
+            send "&cYou need at least 7 empty slots. You currently have %{_empty}%." to player
+            stop
+
+        give 10 buckets to player
+        give 4 lava buckets to player
+        give 2 cauldrons to player
+        give 2 pointed dripstone to player
+
+        set {lavastarted::%uuid of player%} to true
+        send "&aLava starter kit claimed!" to player
+
+
+command /mergebucket:
+    aliases: /mb
+    trigger:
+        set {_totalLava} to 0
+        set {_itemsFound} to 0
+        loop all items in player's inventory:
+            if custom model data of loop-item is 9999:
+                add 1 to {_itemsFound}
+                set {_lore} to uncolored line 2 of lore of loop-item
+                replace all "⎢ " and "Collected: " with "" in {_lore}
+                set {_val} to {_lore} parsed as integer
+                if {_val} is not set:
+                    set {_val} to 1
+                add {_val} to {_totalLava}
+        if {_itemsFound} is 0:
+            send "&cYou don't have any Custom Lava Buckets to merge!" to player
+            stop
+        if {_itemsFound} is 1:
+            send "&cYou only have one bucket! No need to merge." to player
+            stop
+        loop all items in player's inventory:
+            if custom model data of loop-item is 9999:
+                set slot index of loop-item of player's inventory to air
+        set {_i} to lava bucket named "&6&lFull Lava Bucket &e(%{_totalLava}%)"
+        set custom model data of {_i} to 9999
+        set line 1 of lore of {_i} to "&r&f&l⎡ &r&c&lCannot be placed."
+        set line 2 of lore of {_i} to "&r&f&l⎢ &r&7Collected: &f%{_totalLava}%"
+        set line 3 of lore of {_i} to "&r&f&l⎢ &r&7Player: &e%player%"
+        set line 4 of lore of {_i} to "&r&f&l⎣ &r&7Last Updated: &d%now%"
+        give player {_i}
+        play sound "block.anvil.use" with volume 0.5 to player
+        send "&a&lMERGED! &7Combined &f%{_itemsFound}% &7buckets into one stack of &6%{_totalLava}% &7Lava." to player
+
+command /lavareset <offline player>:
+    trigger:
+        if name of player is "Ninja_TNT" or "_Willz_" or "CommonTea":
+            delete {lavastarted::%uuid of arg-1%}
+            send "&aLava starter kit reset for %arg-1%." to player
+        else:
+            send "&cYou do not have permission to use this command." to player
+
+command /lavashop:
+    aliases: /magmashop, /lshop
+    trigger:
+        set {_gui} to a new chest inventory with 4 rows named "&8Lava & Magma Exchange"
+        
+        set slot (integers between 0 and 9), 16, 17, 18, 26 and (integers between 27 and 35) of {_gui} to black stained glass pane named " "
+        set slot 10 of {_gui} to magma block named "&6Lava &4Amalgamation" with lore "&7Cost: &c2 &6&lFull Lava Bucket" and "" and "&eClick to convert!"
+        set slot 11 of {_gui} to prismarine shard named "&b&lSHARD VOUCHER" with lore "&7Cost: &c2 Magma Amalgamations" and "" and "&fRedeem to receive 30 Prismarine Shards." and "&eRight-click to redeem."
+        set slot 12 of {_gui} to gold nugget named "&eGold Nugget Bundle" with lore "&7Cost: &c6 Magma Amalgamations" and "" and "&fExchange for 20 Gold."
+        set slot 13 of {_gui} to {tier1egg} with lore "&7Cost: &c2 Magma Amalgamations" and "" and "&fContains a random pet." and "&7ᴄᴏᴍᴍᴏɴ: 75%% | ʀᴀʀᴇ: 20%% | ᴇᴘɪᴄ: 5%%"
+        set slot 14 of {_gui} to end portal frame named "&dPlayer Shop" with lore "&7Cost: &c30 Magma Amalgamations" and "" and "&fPlace to create a personal shop."
+        set slot 15 of {_gui} to bucket named "&fBulk Buckets" with lore "&7Cost: &c1 Magma Amalgamation" and "" and "&fReceive 16 empty buckets."
+        set slot 16 of {_gui} to blaze powder named "&a&lSwap to New Buckets" with lore "&7Cost: 1 Lava" and "" and "&fReceive &6&lFull Lava Bucket (1)" and "&cNOTE: &7This will take all regular lava from your inventory"
+        set slot 19 of {_gui} to lava bucket named "&fLava Bucket" with lore "&7Cost: &c1 &6&lFull Lava Bucket" and "" and "&fA standard bucket of lava."
+
+        open {_gui} to player
+
+on inventory click:
+    if name of event-inventory is "&8Lava & Magma Exchange":
+        cancel event
+        if clicked inventory is player's inventory:
+            stop
+
+        set {_p} to player
+        set {_slot} to index of event-slot
+
+        if {_slot} is 10 or 19:
+            if {_slot} is 10:
+                set {_cost} to 2
+                set {_reward} to 1 of magma block named "&6Lava &4Amalgamation"
+                set {_msg} to "&aSuccessfully converted 2 Lava into 1 Amalgamation!"
+            else:
+                set {_cost} to 1
+                set {_reward} to 1 of lava bucket
+                set {_msg} to "&aPurchased a Lava Bucket for 1 stored lava!"
+
+            set {_totalLava} to 0
+            loop all items in {_p}'s inventory:
+                if custom model data of loop-item is 9999:
+                    set {_lore} to uncolored line 2 of lore of loop-item
+                    replace all "⎢", "Collected:", " " with "" in {_lore}
+                    add ({_lore} parsed as integer) to {_totalLava}
+
+            if {_totalLava} < {_cost}:
+                send "&cYou need a total of %{_cost}% lava! (You have: %{_totalLava}%)" to {_p}
+                stop
+
+            if {_p}'s inventory can't hold {_reward}:
+                send "&cYour inventory is full. Make space first." to {_p}
+                play sound "entity.villager.no" to {_p}
+                stop
+
+            set {_toPay} to {_cost}
+            loop integers between 0 and 35:
+                if {_toPay} <= 0:
+                    stop loop
+
+                set {_item} to slot loop-integer of {_p}'s inventory
+                if custom model data of {_item} is 9999:
+                    set {_lore2} to uncolored line 2 of lore of {_item}
+                    replace all "⎢", "Collected:", " " with "" in {_lore2}
+                    set {_val} to {_lore2} parsed as integer
+                    if {_val} is not set:
+                        set {_val} to 0
+
+                    if {_val} <= {_toPay}:
+                        subtract {_val} from {_toPay}
+                        set slot loop-integer of {_p}'s inventory to air
+                    else:
+                        subtract {_toPay} from {_val}
+                        set {_toPay} to 0
+                        set name of {_item} to "&6&lFull Lava Bucket &e(%{_val}%)"
+                        set line 2 of lore of {_item} to "&r&f&l⎢ &r&7Collected: &f%{_val}%"
+                        set line 4 of lore of {_item} to "&r&f&l⎣ &r&7Last Updated: &d%now%"
+                        set slot loop-integer of {_p}'s inventory to {_item}
+
+            give {_reward} to {_p}
+            send {_msg} to {_p}
+            play sound "item.bucket.fill_lava" with volume 0.7 to {_p}
+            stop
+
+        if {_slot} is 11:
+            set {_reward} to createShardVoucher(30)
+
+            if {_p}'s inventory can't hold {_reward}:
+                send "&cYour inventory is full. Make space first." to {_p}
+                play sound "entity.villager.no" to {_p}
+                stop
+
+            if {_p} has 2 of magma block named "&6Lava &4Amalgamation":
+                remove 2 of magma block named "&6Lava &4Amalgamation" from {_p}'s inventory
+                give {_reward} to {_p}
+                send "&aPurchased Shard Voucher!" to {_p}
+            else:
+                send "&cYou need 2 Magma Amalgamations!" to {_p}
+            stop
+
+        if {_slot} is 12:
+            set {_reward} to createGoldVoucher(20)
+
+            if {_p}'s inventory can't hold {_reward}:
+                send "&cYour inventory is full. Make space first." to {_p}
+                play sound "entity.villager.no" to {_p}
+                stop
+
+            if {_p} has 6 of magma block named "&6Lava &4Amalgamation":
+                remove 6 of magma block named "&6Lava &4Amalgamation" from {_p}'s inventory
+                give {_reward} to {_p}
+                send "&aPurchased Gold Bundle!" to {_p}
+            else:
+                send "&cYou need 6 Magma Amalgamations!" to {_p}
+            stop
+
+        if {_slot} is 13:
+            set {_reward} to 1 of {tier1egg}
+
+            if {_p}'s inventory can't hold {_reward}:
+                send "&cYour inventory is full. Make space first." to {_p}
+                play sound "entity.villager.no" to {_p}
+                stop
+
+            if {_p} has 2 of magma block named "&6Lava &4Amalgamation":
+                remove 2 of magma block named "&6Lava &4Amalgamation" from {_p}'s inventory
+                give {_reward} to {_p}
+                send "&aPurchased Pet Egg!" to {_p}
+            else:
+                send "&cYou need 2 Magma Amalgamations!" to {_p}
+            stop
+
+        if {_slot} is 14:
+            set {_reward} to 1 of end portal frame named "&dPlayer Shop"
+
+            if {_p}'s inventory can't hold {_reward}:
+                send "&cYour inventory is full. Make space first." to {_p}
+                play sound "entity.villager.no" to {_p}
+                stop
+
+            if {_p} has 30 of magma block named "&6Lava &4Amalgamation":
+                remove 30 of magma block named "&6Lava &4Amalgamation" from {_p}'s inventory
+                give {_reward} to {_p}
+                send "&aPurchased Player Shop!" to {_p}
+            else:
+                send "&cYou need 30 Magma Amalgamations!" to {_p}
+            stop
+
+        if {_slot} is 15:
+            set {_reward} to 16 of bucket
+
+            if {_p}'s inventory can't hold {_reward}:
+                send "&cYour inventory is full. Make space first." to {_p}
+                play sound "entity.villager.no" to {_p}
+                stop
+
+            if {_p} has 1 of magma block named "&6Lava &4Amalgamation":
+                remove 1 of magma block named "&6Lava &4Amalgamation" from {_p}'s inventory
+                give {_reward} to {_p}
+                send "&aPurchased Bulk Buckets!" to {_p}
+            else:
+                send "&cYou need 1 Magma Amalgamation!" to {_p}
+            stop
+
+        if {_slot} is 16:
+            set {_lavaCount} to 0
+            loop all items in {_p}'s inventory:
+                if loop-item is lava bucket:
+                    if custom model data of loop-item is not 9999:
+                        add item amount of loop-item to {_lavaCount}
+
+            if {_lavaCount} is 0:
+                send "&cYou don't have any regular lava buckets to swap!" to {_p}
+                stop
+
+            set {_customFound} to false
+            loop integers between 0 and 35:
+                set {_check} to slot loop-integer of {_p}'s inventory
+                if custom model data of {_check} is 9999:
+                    set {_customFound} to true
+                    stop loop
+
+            if {_customFound} is false:
+                set {_newItem} to lava bucket named "&6&lFull Lava Bucket &e(%{_lavaCount}%)"
+                set custom model data of {_newItem} to 9999
+                set lore of {_newItem} to "&r&f&l⎡ &r&c&lCannot be placed.", "&r&f&l⎢ &r&7Collected: &f%{_lavaCount}%", "&r&f&l⎢ &r&7Player: &e%{_p}%", "&r&f&l⎣ &r&7Last Updated: &d%now%"
+
+                if {_p}'s inventory can't hold {_newItem}:
+                    send "&cYour inventory is full. Make space first." to {_p}
+                    play sound "entity.villager.no" to {_p}
+                    stop
+
+            remove {_lavaCount} of lava bucket from {_p}'s inventory
+
+            if {_customFound} is true:
+                loop integers between 0 and 35:
+                    set {_check2} to slot loop-integer of {_p}'s inventory
+                    if custom model data of {_check2} is 9999:
+                        set {_lore3} to uncolored line 2 of lore of {_check2}
+                        replace all "⎢", "Collected:", " " with "" in {_lore3}
+                        set {_current} to {_lore3} parsed as integer
+                        if {_current} is not set:
+                            set {_current} to 0
+
+                        add {_lavaCount} to {_current}
+                        set line 2 of lore of {_check2} to "&r&f&l⎢ &r&7Collected: &f%{_current}%"
+                        set line 4 of lore of {_check2} to "&r&f&l⎣ &r&7Last Updated: &d%now%"
+                        set name of {_check2} to "&6&lFull Lava Bucket &e(%{_current}%)"
+                        set slot loop-integer of {_p}'s inventory to {_check2}
+                        stop loop
+            else:
+                give {_newItem} to {_p}
+
+            send "&a&lSUCCESS! &7Added &e%{_lavaCount}% &7lava to your storage bucket." to {_p}
+            play sound "item.bucket.fill_lava" to {_p}
+            stop
+
+command /adminbucket <player> <integer>:
+    permission: op
+    trigger:
+        set {_i} to lava bucket named "&6&lFull Lava Bucket &e(%arg-2%)"
+        set custom model data of {_i} to 9999
+        set line 1 of lore of {_i} to "&r&f&l⎡ &r&c&lCannot be placed."
+        set line 2 of lore of {_i} to "&r&f&l⎢ &r&7Collected: &f%arg-2%"
+        set line 3 of lore of {_i} to "&r&f&l⎢ &r&7Player: &e%arg-1%"
+        set line 4 of lore of {_i} to "&r&f&l⎣ &r&7Last Updated: &d%now%"
+        give arg-1 {_i}
+        send "&6[Admin] &7Given %arg-1% a bucket with %arg-2% lava."
+
+
+command /lavainv:
+    description: View your lava farming stats
+    aliases: /lavainventory, /lvinv
+    trigger:
+        set {_u} to uuid of player
+        set {_amount} to {lava_collected::%{_u}%} ? 0
+            
+        send "&6=== Your Lava Progress ==="
+        send "&7Total buckets farmed: &e%{_amount}%"
+        if {lava_buffer::%{_u}%} is set:
+            send "&7Pending summary: &f%{lava_buffer::%{_u}%}%"
+        send "&6========================"
+
+command /lavaleaderboard:
+    description: View top lava collectors
+    aliases: /lavalb, /lvlb
+    trigger:
+        if size of {lava_collected::*} is 0:
+            send "&cNo lava has been collected yet."
+            stop
+        set {_indices::*} to sorted indices of {lava_collected::*} in descending order
+        send "&6=== Lava Collection Leaderboard ==="
+        set {_rank} to 1
+        loop {_indices::*}:
+            set {_uuid} to loop-value
+            set {_amount} to {lava_collected::%{_uuid}%}
+            set {_player} to {_uuid} parsed as offline player 
+            send "&e%{_rank}%. &f%{_player}% &7- &6%{_amount}% &etimes"
+            add 1 to {_rank}
+            if {_rank} > 10:
+                stop
+
+on place of magma block:
+    if name of player's tool is "&6Lava &4Amalgamation":
+        cancel event
+        send action bar "&c&lX &7This item cannot be placed." to player
+
+on right click on cauldron or lava cauldron:
+    if custom model data of player's tool is 9999:
+        cancel event
+        send action bar "&c&lX &7You cannot put this lava back into a cauldron." to player
+
+on place of hopper:
+    set {_below} to block below event-block
+    if {_below} is furnace or blast furnace or smoker:
+        cancel event
+        send "&cYou cannot place hoppers on furnaces." to player
+
+on inventory item move:
+    set {_srcHopper} to false
+    set {_dstHopper} to false
+
+    if past event-inventory is hopper inventory:
+        set {_srcHopper} to true
+    else if holder of past event-inventory is hopper:
+        set {_srcHopper} to true
+    else if holder of past event-inventory is hopper minecart:
+        set {_srcHopper} to true
+
+    if event-inventory is hopper inventory:
+        set {_dstHopper} to true
+    else if holder of event-inventory is hopper:
+        set {_dstHopper} to true
+    else if holder of event-inventory is hopper minecart:
+        set {_dstHopper} to true
+
+    set {_srcFurnace} to false
+    set {_dstFurnace} to false
+
+    if past event-inventory is furnace inventory or blast furnace inventory or smoker inventory:
+        set {_srcFurnace} to true
+    if event-inventory is furnace inventory or blast furnace inventory or smoker inventory:
+        set {_dstFurnace} to true
+
+    if {_srcHopper} is true and {_dstFurnace} is true:
+        cancel event
+        stop
+    if {_dstHopper} is true and {_srcFurnace} is true:
+        cancel event
+        stop
+
+on player teleport:
+    if name of world of event-location is "world":
+        cancel event
+        if {world_block_guard::%player%} is not set:
+            set {world_block_guard::%player%} to true
+            make player execute command "/p h"
+            wait 2 ticks
+            delete {world_block_guard::%player%}
+
+on command:
+    command sender is a player
+    set {_m} to lower case of full command
+
+    if {_m} is "world world" or {_m} starts with "world world ":
+        cancel event
+        send "&cYou can't go to that world." to command sender
+        make command sender execute command "/p h"
+		
