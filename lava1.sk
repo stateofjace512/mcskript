@@ -6,7 +6,7 @@ on bucket empty:
 
 
 on dispense:
-    if custom model data of item is 9999 or custom model data of item is 9998:
+    if custom model data of event-item is 9999 or custom model data of event-item is 9998:
         cancel event
 
 command /infbucket:
@@ -45,6 +45,9 @@ on bucket fill with priority highest:
             set player's off hand tool to {_it}
 
         stop
+
+    set {_main} to player's tool
+    set {_off} to player's off hand tool
 
     set {_hand} to ""
     if {_main} is bucket:
@@ -228,7 +231,7 @@ on inventory click:
             loop all items in {_p}'s inventory:
                 if custom model data of loop-item is 9999:
                     set {_lore} to uncolored line 2 of lore of loop-item
-                    replace all "⎢", "Collected:", " " with "" in {_lore}
+                    replace all "⎢" and "Collected:" and " " with "" in {_lore}
                     add ({_lore} parsed as integer) to {_totalLava}
 
             if {_totalLava} < {_cost}:
@@ -248,7 +251,7 @@ on inventory click:
                 set {_item} to slot loop-integer of {_p}'s inventory
                 if custom model data of {_item} is 9999:
                     set {_lore2} to uncolored line 2 of lore of {_item}
-                    replace all "⎢", "Collected:", " " with "" in {_lore2}
+                    replace all "⎢" and "Collected:" and " " with "" in {_lore2}
                     set {_val} to {_lore2} parsed as integer
                     if {_val} is not set:
                         set {_val} to 0
@@ -384,7 +387,7 @@ on inventory click:
                     set {_check2} to slot loop-integer of {_p}'s inventory
                     if custom model data of {_check2} is 9999:
                         set {_lore3} to uncolored line 2 of lore of {_check2}
-                        replace all "⎢", "Collected:", " " with "" in {_lore3}
+                        replace all "⎢" and "Collected:" and " " with "" in {_lore3}
                         set {_current} to {_lore3} parsed as integer
                         if {_current} is not set:
                             set {_current} to 0
@@ -489,10 +492,10 @@ on inventory item move:
     if event-inventory is furnace inventory or blast furnace inventory or smoker inventory:
         set {_dstFurnace} to true
 
-    if {_srcHopper} is true and {_dstFurnace} is true:
+    if {_srcHopper} and {_dstFurnace}:
         cancel event
         stop
-    if {_dstHopper} is true and {_srcFurnace} is true:
+    if {_dstHopper} and {_srcFurnace}:
         cancel event
         stop
 
