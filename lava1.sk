@@ -6,7 +6,8 @@ on bucket empty:
 
 
 on dispense:
-    if custom model data of event-item is 9999 or custom model data of event-item is 9998:
+    set {_dispensed} to event-item
+    if custom model data of {_dispensed} is 9999 or custom model data of {_dispensed} is 9998:
         cancel event
 
 command /infbucket:
@@ -27,7 +28,12 @@ on bucket fill with priority highest:
 
     set {_loc} to location of event-block
 
-    if custom model data of player's tool is 9998 or custom model data of player's off hand tool is 9998:
+    set {_mainItem} to player's tool
+    set {_offItem} to player's off hand tool
+    set {_mainData} to custom model data of {_mainItem}
+    set {_offData} to custom model data of {_offItem}
+
+    if {_mainData} is 9998 or {_offData} is 9998:
         cancel event
         wait 1 tick
         set block at {_loc} to empty cauldron
@@ -35,12 +41,12 @@ on bucket fill with priority highest:
         set {_u} to uuid of player
         add 1 to {inf_bucket_collect::%{_u}%}
 
-        if custom model data of player's tool is 9998:
-            set {_it} to player's tool
+        if {_mainData} is 9998:
+            set {_it} to {_mainItem}
             set line 1 of lore of {_it} to "&7Total Collected: &2%{inf_bucket_collect::%{_u}%}%"
             set player's tool to {_it}
         else:
-            set {_it} to player's off hand tool
+            set {_it} to {_offItem}
             set line 1 of lore of {_it} to "&7Total Collected: &2%{inf_bucket_collect::%{_u}%}%"
             set player's off hand tool to {_it}
 
@@ -510,7 +516,7 @@ on player teleport:
 
 on command:
     command sender is a player
-    set {_m} to lower case of full command
+    set {_m} to lowercase of full command
 
     if {_m} is "world world" or {_m} starts with "world world ":
         cancel event
