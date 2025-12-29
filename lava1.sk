@@ -498,10 +498,10 @@ on inventory item move:
     if event-inventory is furnace inventory or blast furnace inventory or smoker inventory:
         set {_dstFurnace} to true
 
-    if {_srcHopper} is true and {_dstFurnace} is true:
+    if {_srcHopper} and {_dstFurnace}:
         cancel event
         stop
-    if {_dstHopper} is true and {_srcFurnace} is true:
+    if {_dstHopper} and {_srcFurnace}:
         cancel event
         stop
 
